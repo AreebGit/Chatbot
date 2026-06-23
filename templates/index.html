@@ -1,42 +1,907 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Happy Tummy – Food & Fitness Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <script src="https://cdn.tailwindcss.com"></script>
+  :root {
+    --orange: #F5820A;
+    --orange-light: #FFF3E0;
+    --orange-dark: #C96A00;
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --border: #E8E6DF;
+    --text: #1A1A1A;
+    --text-muted: #6B6B6B;
+    --text-hint: #A0A0A0;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
 
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--orange);
+    letter-spacing: -0.3px;
+  }
+  .nav-logo span { color: var(--text); }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--orange); }
+
+  /* ── HERO ── */
+  .hero {
+    background: url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1400&q=80') center/cover no-repeat;
+    position: relative;
+    padding: 3rem 1.5rem 5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 760px;
+  }
+  .hero-eyebrow {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 0.5rem;
+  }
+  .hero-title {
+    text-align: center;
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2rem;
+    line-height: 1.25;
+  }
+
+  /* ── CHAT CARD ── */
+  .chat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .chat-card h2 {
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+  }
+
+  /* Login form */
+  #login-section { }
+  .login-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+  }
+  .login-row input {
+    flex: 1;
+    height: 48px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 1rem;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+    color: var(--text);
+    background: #fff;
+  }
+  .login-row input:focus { border-color: var(--orange); }
+  .login-row input::placeholder { color: var(--text-hint); }
+  .login-hint {
+    font-size: 12px;
+    color: var(--text-hint);
+    text-align: center;
+  }
+  .btn-orange {
+    height: 48px;
+    padding: 0 1.25rem;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-orange:hover { background: var(--orange-dark); }
+
+  /* Query input */
+  #query-section { display: none; }
+  .query-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 0.5rem;
+  }
+  .query-row input {
+    flex: 1;
+    height: 52px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 1rem;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+    color: var(--text);
+    background: #f7f7f5;
+  }
+  .query-row input:focus {
+    border-color: var(--orange);
+    background: #fff;
+  }
+  .query-row input::placeholder { color: var(--text-hint); }
+  .btn-send {
+    width: 52px;
+    height: 52px;
+    background: var(--orange);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-send:hover { background: var(--orange-dark); }
+  .btn-send svg { width: 20px; height: 20px; fill: #fff; }
+
+  /* Chat thread */
+  #chat-thread {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+  }
+  #chat-thread:empty { display: none; }
+  .bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .bubble.user {
+    align-self: flex-end;
+    background: var(--orange);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .bubble.assistant {
+    align-self: flex-start;
+    background: #f2f2f0;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.typing {
+    background: #f2f2f0;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .dot-anim span {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.2s infinite;
+  }
+  .dot-anim span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-anim span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+  }
+
+  /* feedback row */
+  .feedback-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    align-self: flex-start;
+  }
+  .fb-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .fb-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .fb-btn.active { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+
+  /* ── SUGGESTED CHIPS ── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+  .chip {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: var(--orange-light);
+  }
+
+  /* ── FAQ SECTION ── */
+  .faq-section {
+    max-width: 780px;
+    margin: 3rem auto;
+    padding: 0 1.5rem 4rem;
+  }
+  .faq-section h2 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Category tabs */
+  .faq-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+  }
+  .faq-tab {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .faq-tab.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+  .faq-tab .tab-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  /* Accordion */
+  .accordion { display: flex; flex-direction: column; gap: 6px; }
+  .acc-item {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .acc-item.open { border-color: var(--orange); }
+  .acc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    gap: 12px;
+  }
+  .acc-header:hover { background: #fafaf8; }
+  .acc-arrow {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    color: var(--orange);
+    transition: transform 0.2s;
+  }
+  .acc-item.open .acc-arrow { transform: rotate(180deg); }
+  .acc-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  .acc-body-inner {
+    padding: 0 18px 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-muted);
+  }
+  .acc-body-inner a { color: var(--orange); }
+
+  /* References item */
+  .acc-ref { font-size: 13px; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 2rem;
+  }
+  .footer-grid {
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 2rem;
+  }
+  .footer-col h4 {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-hint);
+    margin-bottom: 0.75rem;
+  }
+  .footer-col a {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: 0.4rem;
+    transition: color 0.15s;
+  }
+  .footer-col a:hover { color: var(--orange); }
+  .footer-bottom {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-hint);
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 600px) {
+    .login-row { flex-direction: column; }
+    .chips .chip { flex: 1 1 calc(50% - 5px); text-align: center; }
+    nav .nav-links { display: none; }
+  }
+</style>
 </head>
+<body>
 
-<body class="bg-gray-100">
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">Happy<span>Tummy</span></div>
+  <div class="nav-links">
+    <a href="#">Digestive quotient</a>
+    <a href="#">My meal plan</a>
+    <a href="#">Recipes</a>
+    <a href="#faq">FAQs</a>
+  </div>
+</nav>
 
-<div class="max-w-2xl mx-auto mt-10">
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-content">
+    <p class="hero-eyebrow">Powered by AI</p>
+    <h1 class="hero-title">Questions on Food &amp; Fitness?<br>Just Ask!</h1>
 
-    <div
-        id="chat-box"
-        class="bg-white h-96 overflow-y-auto p-4 border rounded"
-    >
+    <div class="chat-card">
+      <h2 id="chat-card-title">Ask your nutrition &amp; fitness question</h2>
 
+      <!-- Step 1: Login -->
+      <div id="login-section">
+        <div class="login-row">
+          <input id="inp-name" type="text" placeholder="Your name" />
+          <input id="inp-phone" type="tel" placeholder="Phone number" />
+        </div>
+        <div class="login-row">
+          <input id="inp-email" type="email" placeholder="Email address (optional)" style="flex:1" />
+          <button class="btn-orange" onclick="handleLogin()">Start chatting →</button>
+        </div>
+        <p class="login-hint">Already used before? Enter your phone number to restore history.</p>
+        <div style="display:flex;align-items:center;gap:12px;margin:1rem 0 0.5rem">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:12px;color:var(--text-hint)">or</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <button onclick="continueAsGuest()" style="width:100%;height:44px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:500;font-family:'Inter',sans-serif;color:var(--text-muted);cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Continue as guest</button>
+      </div>
+
+      <!-- Step 2: Chat -->
+      <div id="query-section">
+        <div id="chat-thread"></div>
+        <div class="query-row" style="margin-top:1rem">
+          <input id="query-input" type="text" placeholder="Type your question here…" onkeydown="if(event.key==='Enter') sendMessage()" />
+          <button class="btn-send" onclick="sendMessage()" title="Send">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 21L23 12 2 3v7l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="flex mt-4">
-
-        <input
-            id="message-input"
-            class="flex-1 border p-2 rounded"
-            placeholder="Type message..."
-        >
-
-        <button
-            onclick="sendMessage()"
-            class="bg-blue-500 text-white px-4 py-2 ml-2 rounded"
-        >
-            Send
-        </button>
-
+    <!-- Suggested chips -->
+    <div class="chips" id="chips">
+      <div class="chip" onclick="chipClick(this)">How much fibre do I need in a day?</div>
+      <div class="chip" onclick="chipClick(this)">Can I have fruits for dinner?</div>
+      <div class="chip" onclick="chipClick(this)">Why do I feel bloated after eating?</div>
     </div>
-
+  </div>
 </div>
 
-<script src="/static/app.js"></script>
+<!-- ── FAQ SECTION ── -->
+<section class="faq-section" id="faq">
+  <h2>Frequently Asked Questions</h2>
 
+  <div class="faq-tabs" id="faq-tabs"></div>
+  <div class="accordion" id="accordion"></div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h4>Explore</h4>
+      <a href="#">Digestive quotient</a>
+      <a href="#">My meal plan</a>
+      <a href="#">Happy Tummy GPT</a>
+      <a href="#">Experts talk</a>
+      <a href="#">High fibre recipes</a>
+      <a href="#">Multigrain digest</a>
+      <a href="#">High fibre biscuits</a>
+    </div>
+    <div class="footer-col">
+      <h4>Blog</h4>
+      <a href="#">Dietary tips</a>
+      <a href="#">Fibre for digestion</a>
+      <a href="#">Fitness &amp; wellbeing</a>
+      <a href="#">Healthy eating</a>
+      <a href="#">Multigrain benefits</a>
+      <a href="#">WTH health plan</a>
+    </div>
+    <div class="footer-col">
+      <h4>Important links</h4>
+      <a href="#">Login</a>
+      <a href="#">About us</a>
+      <a href="#">Contact us</a>
+      <a href="#" style="color:var(--orange)">Sitemap</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <a href="#">ITC portal</a>
+      <a href="#">Terms &amp; conditions</a>
+      <a href="#">Privacy policy</a>
+    </div>
+  </div>
+  <div class="footer-bottom">Copyright © 2025 Happy Tummy</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ──────────────────────────────────────────
+   CONFIG – point this at your FastAPI server
+   ────────────────────────────────────────── */
+const API_BASE = 'http://localhost:8000';
+
+/* ── State ── */
+let currentUser = null;
+let sessionId = null;
+let lastAssistantBubble = null;
+
+/*
+  currentToken stores the JWT token we get after login.
+  We also save it to localStorage so it survives a page refresh.
+  Next time the user visits, we read it back and they're already logged in.
+*/
+let currentToken = localStorage.getItem('ht_token') || null;
+
+/* ── Utility ── */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function toast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+/*
+  authHeaders() returns the headers object we attach to every
+  protected API request. The server reads the Authorization header,
+  extracts the token, and verifies it before doing anything.
+*/
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${currentToken}`
+  };
+}
+
+/*
+  handleAuthError() is called whenever the server returns 401.
+  It clears the saved token and asks the user to log in again.
+*/
+function handleAuthError() {
+  localStorage.removeItem('ht_token');
+  currentToken = null;
+  currentUser = null;
+  document.getElementById('login-section').style.display = 'block';
+  document.getElementById('query-section').style.display = 'none';
+  document.getElementById('chat-card-title').textContent = 'Ask your nutrition & fitness question';
+  toast('Session expired. Please log in again.');
+}
+
+/* ── Auto-restore session on page load ── */
+/*
+  If a token exists in localStorage, verify it with the server.
+  If it's still valid, skip the login screen automatically.
+*/
+async function tryRestoreSession() {
+  if (!currentToken) return;
+  try {
+    const res = await fetch(`${API_BASE}/verify-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: currentToken })
+    });
+    const data = await res.json();
+    if (data.valid) {
+      const userId = data.payload.user_id;
+      currentUser = { userId, name: 'there', phone: null };
+      sessionId = localStorage.getItem('ht_session') || uid();
+      localStorage.setItem('ht_session', sessionId);
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('query-section').style.display = 'block';
+      document.getElementById('chat-card-title').textContent = 'Welcome back! What\'s on your mind?';
+    } else {
+      /* Token is expired or invalid — clear it */
+      localStorage.removeItem('ht_token');
+      currentToken = null;
+    }
+  } catch(e) { /* server offline, just show login */ }
+}
+
+/* ── Login / upsert-user ── */
+async function handleLogin() {
+  const name  = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  const email = document.getElementById('inp-email').value.trim();
+
+  if (!name || !phone) { toast('Please enter your name and phone number.'); return; }
+
+  let userId;
+
+  /* Step 1: check if user already exists by phone number */
+  try {
+    const loginRes = await fetch(`${API_BASE}/login/${encodeURIComponent(phone)}`);
+    const loginData = await loginRes.json();
+    if (loginData.exists) {
+      userId = loginData.user[1];
+      /* Save the token — this is the wristband */
+      currentToken = loginData.token;
+      localStorage.setItem('ht_token', currentToken);
+      toast('Welcome back! Loading your history…');
+      loadHistory(loginData.history);
+    }
+  } catch(e) { console.warn('Login check failed', e); }
+
+  if (!userId) {
+    /* Step 2: new user — register them */
+    userId = uid();
+    try {
+      const regRes = await fetch(`${API_BASE}/upsert-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, name, email: email || '', phone_number: phone })
+      });
+      const regData = await regRes.json();
+      /* upsert-user now also returns a token */
+      currentToken = regData.token;
+      localStorage.setItem('ht_token', currentToken);
+    } catch(e) { console.warn('upsert-user failed', e); }
+  }
+
+  currentUser = { userId, name, phone };
+  sessionId = uid();
+  localStorage.setItem('ht_session', sessionId);
+
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('query-section').style.display = 'block';
+  document.getElementById('chat-card-title').textContent = `Hi ${name}! What's on your mind?`;
+}
+
+function loadHistory(history) {
+  if (!history || !history.length) return;
+  const thread = document.getElementById('chat-thread');
+  /* history rows: (id, user_id, session_id, role, content, timestamp, feedback) */
+  history.slice(-20).forEach(row => {
+    const role = row[3];
+    const content = row[4];
+    if (role === 'user' || role === 'assistant') addBubble(content, role, false);
+  });
+}
+
+/* ── Guest login ── */
+function continueAsGuest() {
+  const guestId = 'guest_' + uid();
+  currentUser = { userId: guestId, name: 'Guest', phone: null };
+  sessionId = uid();
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('query-section').style.display = 'block';
+  document.getElementById('chat-card-title').textContent = 'Hi! What\'s on your mind?';
+  /* Note: guest messages won't be saved to DB since user isn't registered */
+}
+
+/* ── Chips (suggested questions) ── */
+function chipClick(el) {
+  if (!currentUser) {
+    /* scroll to login */
+    document.getElementById('inp-name').focus();
+    toast('Please log in first to ask a question.');
+    return;
+  }
+  document.getElementById('query-input').value = el.textContent;
+  sendMessage();
+}
+
+/* ── Send message ── */
+async function sendMessage() {
+  const input = document.getElementById('query-input');
+  const text  = input.value.trim();
+  if (!text) return;
+  if (!currentUser) { toast('Please log in first.'); return; }
+
+  input.value = '';
+  addBubble(text, 'user');
+
+  /* Typing indicator */
+  const typingEl = addTypingIndicator();
+
+  try {
+    const res = await fetch(`${API_BASE}/send-message`, {
+      method: 'POST',
+      headers: authHeaders(), /* ← token attached here */
+      body: JSON.stringify({
+        user_id: currentUser.userId,
+        session_id: sessionId,
+        incoming_message: text
+      })
+    });
+
+    /* 401 means token expired or missing */
+    if (res.status === 401) {
+      typingEl.remove();
+      handleAuthError();
+      return;
+    }
+
+    const data = await res.json();
+    typingEl.remove();
+    lastAssistantBubble = addBubble(data.response, 'assistant');
+    addFeedbackRow(lastAssistantBubble);
+  } catch(e) {
+    typingEl.remove();
+    addBubble('Sorry, I couldn\'t connect to the server. Please try again.', 'assistant');
+  }
+}
+
+function addBubble(text, role, scroll=true) {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = `bubble ${role}`;
+  div.textContent = text;
+  thread.appendChild(div);
+  if (scroll) thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+function addTypingIndicator() {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = 'bubble typing';
+  div.innerHTML = '<div class="dot-anim"><span></span><span></span><span></span></div>';
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+function addFeedbackRow(bubbleEl) {
+  const row = document.createElement('div');
+  row.className = 'feedback-row';
+  row.innerHTML = `
+    <button class="fb-btn" onclick="sendFeedback(this,'helpful')">👍 Helpful</button>
+    <button class="fb-btn" onclick="sendFeedback(this,'not_helpful')">👎 Not helpful</button>
+  `;
+  bubbleEl.insertAdjacentElement('afterend', row);
+}
+
+async function sendFeedback(btn, value) {
+  const row = btn.closest('.feedback-row');
+  row.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  try {
+    const res = await fetch(`${API_BASE}/update-feedback`, {
+      method: 'POST',
+      headers: authHeaders(), /* ← token attached here too */
+      body: JSON.stringify({ session_id: sessionId, feedback: value })
+    });
+    if (res.status === 401) handleAuthError();
+  } catch(e) { console.warn('feedback failed', e); }
+}
+
+/* ── FAQ DATA ── */
+const faqData = {
+  'Dietary Fibre': [
+    { q: '1. What is dietary fibre?', a: 'Dietary fibre is the indigestible part of plant foods — including fruits, vegetables, whole grains, and legumes — that passes through your digestive system mostly intact. Unlike other nutrients, fibre isn\'t digested; instead it helps regulate digestion, blood sugar, and cholesterol.' },
+    { q: '2. What are the sources of dietary fibre?', a: 'Great sources include oats, barley, whole wheat, brown rice, lentils, chickpeas, kidney beans, broccoli, carrots, apples, pears, berries, flaxseeds, and nuts. Aim for a mix of soluble and insoluble sources across meals.' },
+    { q: '3. What are the health benefits of dietary fibre?', a: 'Regular fibre intake supports healthy digestion and bowel regularity, lowers LDL cholesterol, helps control blood sugar spikes, promotes satiety (helping with weight management), and feeds beneficial gut bacteria linked to better immune function.' },
+    { q: '4. Which fruits & vegetables are good sources of fibre?', a: 'Top fruit sources: avocado (6.7g/100g), guava, raspberries, passion fruit, and pears. Top vegetable sources: green peas, artichokes, broccoli, sweet corn, and Brussels sprouts. Eating skins where safe boosts intake significantly.' },
+    { q: '5. How much dietary fibre do I need in my daily diet?', a: 'Adults need 25–38g of fibre per day — 25g for women and 38g for men according to most health bodies. Most people consume only about half this amount. Increase intake gradually and drink plenty of water to avoid discomfort.' },
+    { q: '6. Is consuming too much fibre risky?', a: 'Excess fibre (>70g/day) can cause bloating, gas, cramping, and may interfere with absorption of minerals like iron and zinc. Always increase intake gradually and stay well-hydrated.' },
+    { q: '7. Which are the food sources that are low in fibre?', a: 'White bread, white rice, processed cereals, juices (without pulp), most dairy products, meats, eggs, and refined snacks are low in fibre. These can still be part of a balanced diet but shouldn\'t be the staples if fibre intake is a priority.' },
+    { q: '8. How to increase fibre in the diet?', a: 'Switch to whole grain bread and pasta. Add legumes (dal, rajma, chana) to meals. Snack on nuts and fruits instead of packaged snacks. Keep the skin on vegetables and fruits. Add a tablespoon of flaxseed or chia seeds to smoothies or curd.' },
+    { q: '9. References', a: 'WHO Dietary Fibre Guidelines (2023) · ICMR-NIN Nutrient Requirements for Indians · Harvard T.H. Chan School of Public Health – The Nutrition Source' }
+  ],
+  'Multigrain': [
+    { q: '1. What is multigrain?', a: 'Multigrain refers to foods made with more than one type of grain — such as wheat, oats, rye, barley, millet, and corn. Each grain contributes a different nutrient profile, making multigrain products nutritionally richer than single-grain alternatives.' },
+    { q: '2. Are multigrain and whole grain the same?', a: 'No. Multigrain just means multiple grains are used, but they may still be refined. Whole grain means the entire grain kernel (bran, germ, and endosperm) is intact. Whole multigrain is the best of both worlds.' },
+    { q: '3. Benefits of eating multigrain foods', a: 'Multigrain foods offer a broader spectrum of B-vitamins, minerals (iron, magnesium, zinc), and fibre. They support sustained energy, better digestion, and reduced risk of heart disease and type 2 diabetes.' },
+  ],
+  'Balanced Diet': [
+    { q: '1. What is a balanced diet?', a: 'A balanced diet provides the right amounts of macronutrients (carbohydrates, proteins, and fats) and micronutrients (vitamins and minerals) to maintain health, energy, and well-being.' },
+    { q: '2. How do I build a balanced plate?', a: 'Fill half your plate with vegetables and fruits, one quarter with whole grains, and one quarter with lean protein. Include a small portion of healthy fat (nuts, seeds, olive oil) and a dairy or dairy alternative.' },
+  ],
+  'Fats': [
+    { q: '1. Are all fats bad for you?', a: 'No. Unsaturated fats (found in nuts, seeds, avocado, and olive oil) are beneficial for heart health. Trans fats and excessive saturated fats are harmful. The goal is to replace bad fats with good ones, not to eliminate fat entirely.' },
+    { q: '2. How much fat should I eat daily?', a: 'Fats should make up 20–35% of total daily calories. For a 2000-calorie diet that\'s 44–78g of fat per day. Prioritise unsaturated sources and limit saturated fat to under 10% of calories.' },
+  ],
+  'BMI & IBW': [
+    { q: '1. What is BMI?', a: 'Body Mass Index (BMI) is a simple calculation using your height and weight (kg/m²). It categorises weight as underweight (<18.5), normal (18.5–24.9), overweight (25–29.9), or obese (≥30). It\'s a screening tool, not a diagnostic measure.' },
+    { q: '2. What is IBW?', a: 'Ideal Body Weight (IBW) is an estimated target weight based on height and sex using formulas like Devine or Robinson. It\'s used clinically to calculate medication doses and nutritional needs rather than as a strict personal goal.' },
+  ],
+};
+
+/* ── Render FAQ ── */
+function renderFAQ(category) {
+  const items = faqData[category] || [];
+  const acc = document.getElementById('accordion');
+  acc.innerHTML = '';
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'acc-item';
+    el.innerHTML = `
+      <div class="acc-header" onclick="toggleAcc(this)">
+        <span>${item.q}</span>
+        <svg class="acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="acc-body">
+        <div class="acc-body-inner">${item.a}</div>
+      </div>
+    `;
+    acc.appendChild(el);
+  });
+}
+
+function toggleAcc(header) {
+  const item = header.closest('.acc-item');
+  const body = item.querySelector('.acc-body');
+  const isOpen = item.classList.contains('open');
+  /* Close all */
+  document.querySelectorAll('.acc-item.open').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.acc-body').style.maxHeight = '0';
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
+}
+
+function initTabs() {
+  const tabsEl = document.getElementById('faq-tabs');
+  Object.keys(faqData).forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'faq-tab' + (i === 0 ? ' active' : '');
+    btn.innerHTML = `<span class="tab-dot"></span>${cat}`;
+    btn.onclick = () => {
+      document.querySelectorAll('.faq-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderFAQ(cat);
+    };
+    tabsEl.appendChild(btn);
+  });
+  renderFAQ(Object.keys(faqData)[0]);
+}
+
+initTabs();
+
+/*
+  When the page loads, try to restore a previous session.
+  If the user has a valid saved token, skip the login screen.
+  Guest users always see the login screen (no token saved).
+*/
+tryRestoreSession();
+</script>
 </body>
 </html>
