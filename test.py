@@ -86,7 +86,7 @@ def get_current_user(
 # ─────────────────────────────────────────
 
 
-@app.get("/chat")
+@app.get("/chat", include_in_schema=False)
 def chat_ui(request: Request):
     return templates.TemplateResponse(
         request=request,
@@ -94,7 +94,7 @@ def chat_ui(request: Request):
     )
 
 # Login: public because this is HOW you get the token
-@app.get("/login/{phone_number}")
+@app.get("/login/{phone_number}", include_in_schema=False)
 def login(phone_number: str):
 
     user = get_user_by_phone(phone_number)
@@ -116,10 +116,41 @@ def login(phone_number: str):
         "history": history
     }
 
+# This is the endpoint the original Swagger has at the top.
+# You call it with a user_id and it gives you back a token.
+# In Swagger UI, you then click the 🔒 Authorize button,
+# paste the token, and all locked endpoints become usable.
+#
+# Why is this separate from /login?
+# /login is for the website — it looks up a user by phone number.
+# /generate-bearer-token is for developers/testing — you directly
+# say "give me a token for this user_id" without needing a phone number.
+#
+@app.post("/generate-bearer-token")
+def generate_bearer_token(data: dict):
+
+    user_id = data.get("user_id")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="user_id is required"
+        )
+
+    token = create_token(user_id)
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
 # Register: public because new users don't have a token yet
 # After registering, the frontend calls /login to get their token
 @app.post("/upsert-user")
-def register_user(data: dict):
+def register_user(
+    data: dict,
+    current_user: str = Depends(get_current_user)
+):
 
     upsert_user(
         user_id=data["user_id"],
@@ -187,19 +218,6 @@ def update_feedback_endpoint(
 
     return {"message": "Feedback updated"}
 
-@app.post("/verify-token")
-def verify(data: dict):
-
-    payload = verify_token(data["token"])
-
-    if not payload:
-        return {"valid": False}
-
-    return {
-        "valid": True,
-        "payload": payload
-    }
-
 
 @app.get("/get-message/{message_id}")
 def single_message(
@@ -245,7 +263,6 @@ def analytics(
 ):
     return get_analytics()
 
-    
 @app.get("/")
 def root():
     return {"message": "Happy Tummy API"}

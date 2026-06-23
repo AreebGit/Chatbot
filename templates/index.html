@@ -612,32 +612,47 @@ function handleAuthError() {
 
 /* ── Auto-restore session on page load ── */
 /*
-  If a token exists in localStorage, verify it with the server.
-  If it's still valid, skip the login screen automatically.
+  JWT tokens are made of 3 parts separated by dots:
+    header.payload.signature
+  The payload part is just base64-encoded JSON — we can
+  decode it directly in the browser without asking the server.
+  We read the "exp" (expiry) field and check it against now.
+  If it's expired, clear it. If it's still valid, restore the session.
 */
-async function tryRestoreSession() {
-  if (!currentToken) return;
+function decodeTokenLocally(token) {
   try {
-    const res = await fetch(`${API_BASE}/verify-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: currentToken })
-    });
-    const data = await res.json();
-    if (data.valid) {
-      const userId = data.payload.user_id;
-      currentUser = { userId, name: 'there', phone: null };
-      sessionId = localStorage.getItem('ht_session') || uid();
-      localStorage.setItem('ht_session', sessionId);
-      document.getElementById('login-section').style.display = 'none';
-      document.getElementById('query-section').style.display = 'block';
-      document.getElementById('chat-card-title').textContent = 'Welcome back! What\'s on your mind?';
-    } else {
-      /* Token is expired or invalid — clear it */
-      localStorage.removeItem('ht_token');
-      currentToken = null;
-    }
-  } catch(e) { /* server offline, just show login */ }
+    /* Grab the middle part (payload) and decode it */
+    const base64 = token.split('.')[1];
+    /* atob() decodes base64. The replace() fixes URL-safe base64 characters */
+    const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json);
+  } catch(e) {
+    return null;
+  }
+}
+
+function tryRestoreSession() {
+  if (!currentToken) return;
+
+  const payload = decodeTokenLocally(currentToken);
+
+  /* payload.exp is Unix timestamp in seconds */
+  const isExpired = !payload || (payload.exp * 1000 < Date.now());
+
+  if (isExpired) {
+    /* Token is expired — clear it and show login */
+    localStorage.removeItem('ht_token');
+    currentToken = null;
+    return;
+  }
+
+  /* Token is valid — restore the session without a server call */
+  currentUser = { userId: payload.user_id, name: 'there', phone: null };
+  sessionId = localStorage.getItem('ht_session') || uid();
+  localStorage.setItem('ht_session', sessionId);
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('query-section').style.display = 'block';
+  document.getElementById('chat-card-title').textContent = 'Welcome back! What\'s on your mind?';
 }
 
 /* ── Login / upsert-user ── */
@@ -665,19 +680,26 @@ async function handleLogin() {
   } catch(e) { console.warn('Login check failed', e); }
 
   if (!userId) {
-    /* Step 2: new user — register them */
+    /* Step 2: new user — first get a token, then register */
     userId = uid();
     try {
-      const regRes = await fetch(`${API_BASE}/upsert-user`, {
+      /* Get a token first (upsert-user is locked, so we need this) */
+      const tokenRes = await fetch(`${API_BASE}/generate-bearer-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      });
+      const tokenData = await tokenRes.json();
+      currentToken = tokenData.access_token;
+      localStorage.setItem('ht_token', currentToken);
+
+      /* Now register the user using that token */
+      await fetch(`${API_BASE}/upsert-user`, {
+        method: 'POST',
+        headers: authHeaders(),
         body: JSON.stringify({ user_id: userId, name, email: email || '', phone_number: phone })
       });
-      const regData = await regRes.json();
-      /* upsert-user now also returns a token */
-      currentToken = regData.token;
-      localStorage.setItem('ht_token', currentToken);
-    } catch(e) { console.warn('upsert-user failed', e); }
+    } catch(e) { console.warn('Registration failed', e); }
   }
 
   currentUser = { userId, name, phone };
