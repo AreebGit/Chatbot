@@ -7,8 +7,12 @@ from config import API_KEY
 from db import (
     save_message,
     get_recent_messages,
-    save_user_fact,
-    get_user_facts
+    upsert_user,
+    get_user_by_phone,
+    get_messages_by_user,
+    get_user_facts,
+    save_user_fact  
+    
 )
 
 

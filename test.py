@@ -14,6 +14,7 @@ from db import (
     get_all_users,
     get_user,
     update_feedback,
+    get_user_by_phone,
     save_user_fact,
     get_user_facts
 )
@@ -37,7 +38,8 @@ def register_user(data: dict):
     upsert_user(
         user_id=data["user_id"],
         name=data["name"],
-        email=data["email"]
+        email=data["email"],
+        phone_number=data["phone_number"]
     )
 
     return {
@@ -120,3 +122,24 @@ def chat_ui(request: Request):
 def analytics():
 
     return get_analytics()
+
+@app.get("/login/{phone_number}")
+def login(phone_number: str):
+
+    user = get_user_by_phone(phone_number)
+
+    if not user:
+        return {
+            "exists": False,
+            "message": "User not found"
+        }
+
+    user_id = user[1]
+
+    history = get_messages_by_user(user_id)
+
+    return {
+        "exists": True,
+        "user": user,
+        "history": history
+    }

@@ -189,7 +189,8 @@ def get_recent_messages(
 def upsert_user(
     user_id,
     name,
-    email
+    email,
+    phone_number 
 ):
 
     conn = get_connection()
@@ -201,9 +202,11 @@ def upsert_user(
         INSERT INTO users (
             user_id,
             name,
-            email
+            email,
+            phone_number
         )
         VALUES (
+            %s,
             %s,
             %s,
             %s
@@ -212,12 +215,14 @@ def upsert_user(
         DO UPDATE
         SET
             name = EXCLUDED.name,
-            email = EXCLUDED.email
+            email = EXCLUDED.email,
+            phone_number = EXCLUDED.phone_number
         """,
         (
             user_id,
             name,
-            email
+            email,
+            phone_number
         )
     )
 
@@ -270,6 +275,7 @@ def get_user(user_id):
     conn.close()
 
     return row
+
 def update_feedback(
     session_id,
     feedback
@@ -389,3 +395,45 @@ def get_sessions(user_id):
     conn.close()
 
     return rows
+
+def get_user_by_phone(phone_number):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE phone_number = %s
+        """,
+        (phone_number,)
+    )
+
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return row
+
+def get_user_by_phone(phone_number):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE phone_number = %s
+        """,
+        (phone_number,)
+    )
+
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return row
