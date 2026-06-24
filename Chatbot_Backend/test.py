@@ -22,9 +22,8 @@ app = FastAPI()
 # origin (e.g. frontend on port 5500, backend on port 8000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://13.60.22.112:3000"
-    ],
+    allow_origins=["*"],
+allow_credentials=False,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
