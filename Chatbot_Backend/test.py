@@ -2,9 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from agent import ask_llm, create_token, verify_token
+from Chatbot_Backend.agent import ask_llm, create_token, verify_token
 
-from db import (
+from Chatbot_Backend.db import (
     get_all_messages,
     get_messages_by_user,
     get_message_by_id,
