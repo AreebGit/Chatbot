@@ -132,7 +132,10 @@ def send_message(
     return {"response": response}
 
 
-@app.post("/update-feedback")
+@app.post(
+    "/update-feedback",
+    summary="Handle feedback"
+)
 def update_feedback_endpoint(
     data: dict,
     current_user: str = Depends(get_current_user)
@@ -145,7 +148,10 @@ def update_feedback_endpoint(
     return {"message": "Feedback updated"}
 
 
-@app.get("/get-message/{message_id}")
+@app.get(
+    "/get-message/{message_id}",
+    summary="Get Message"
+)
 def single_message(
     message_id: int,
     current_user: str = Depends(get_current_user)
@@ -153,7 +159,10 @@ def single_message(
     return get_message_by_id(message_id)
 
 
-@app.get("/messages/{user_id}")
+@app.get(
+    "/messages/{user_id}",
+    summary="Get Messages"
+)
 def user_messages(
     user_id: str,
     current_user: str = Depends(get_current_user)
@@ -161,14 +170,20 @@ def user_messages(
     return get_messages_by_user(user_id)
 
 
-@app.get("/messages")
+@app.get(
+    "/messages",
+    summary="Get All Messages"
+)
 def messages(
     current_user: str = Depends(get_current_user)
 ):
     return get_all_messages()
 
 
-@app.get("/users/{user_id}")
+@app.get(
+    "/users/{user_id}",
+    summary="Get Personas"
+)
 def user(
     user_id: str,
     current_user: str = Depends(get_current_user)
@@ -176,14 +191,20 @@ def user(
     return get_user(user_id)
 
 
-@app.get("/users")
+@app.get(
+    "/users",
+    summary="Get All Personas"
+)
 def users(
     current_user: str = Depends(get_current_user)
 ):
     return get_all_users()
 
 
-@app.get("/analytics")
+@app.get(
+    "/analytics",
+    summary="Get Message Analytics"
+)
 def analytics(
     current_user: str = Depends(get_current_user)
 ):
