@@ -164,14 +164,31 @@ function loadHistory(history) {
 }
 
 /* ── Guest login ── */
-function continueAsGuest() {
-  const guestId = 'guest_' + uid();
-  currentUser = { userId: guestId, name: 'Guest', phone: null };
-  sessionId = uid();
-  document.getElementById('login-section').style.display = 'none';
-  document.getElementById('query-section').style.display = 'block';
-  document.getElementById('chat-card-title').textContent = 'Hi! What\'s on your mind?';
-  /* Note: guest messages won't be saved to DB since user isn't registered */
+async function continueAsGuest() {
+    const guestId = 'guest_' + uid();
+
+    const tokenRes = await fetch(`${API_BASE}/generate-bearer-token`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+            user_id: guestId
+        })
+    });
+
+    const tokenData = await tokenRes.json();
+
+    currentToken = tokenData.access_token;
+
+    currentUser = {
+        userId: guestId,
+        name: 'Guest',
+        phone: null
+    };
+
+    sessionId = uid();
+
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('query-section').style.display = 'block';
 }
 
 /* ── Chips (suggested questions) ── */
