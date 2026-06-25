@@ -1,7 +1,7 @@
 /* ──────────────────────────────────────────
    CONFIG – point this at your FastAPI server
    ────────────────────────────────────────── */
-const API_BASE = 'http://13.60.22.112:8000';
+const API_BASE = 'api';
 
 /* ── State ── */
 let currentUser = null;
