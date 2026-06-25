@@ -56,7 +56,7 @@ def verify_token(token):
 
 def load_system_prompt():
 
-    with open("system_prompt.json", "r") as file:
+    with open("Chatbot_Backend/system_prompt.json", "r") as file:
         data = json.load(file)
 
     return data["system_prompt"]
