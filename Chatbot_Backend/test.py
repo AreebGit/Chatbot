@@ -58,9 +58,6 @@ def get_current_user(
 # PUBLIC ENDPOINTS (no token needed)
 # ─────────────────────────────────────────
 
-@app.get("/")
-def root():
-    return {"message": "Happy Tummy API"}
 
 
 # Developers/Swagger: give me a token for this user_id directly
@@ -191,3 +188,7 @@ def analytics(
     current_user: str = Depends(get_current_user)
 ):
     return get_analytics()
+
+@app.get("/")
+def root():
+    return {"message": "Happy Tummy API"}
