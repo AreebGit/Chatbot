@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from Chatbot_Backend.agent import ask_llm, create_token, verify_token
@@ -17,16 +16,6 @@ from Chatbot_Backend.db import (
 )
 
 app = FastAPI()
-
-# CORS allows the browser to call this API from a different
-# origin (e.g. frontend on port 5500, backend on port 8000)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ─────────────────────────────────────────
 # AUTH DEPENDENCY
