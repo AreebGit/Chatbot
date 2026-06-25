@@ -134,7 +134,7 @@ def send_message(
 
 @app.post(
     "/update-feedback",
-    summary="Handle feedback"
+    summary="Handle Feedback"
 )
 def update_feedback_endpoint(
     data: dict,
