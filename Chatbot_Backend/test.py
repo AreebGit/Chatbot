@@ -13,19 +13,11 @@ from Chatbot_Backend.db import (
     get_user,
     update_feedback,
     get_user_by_phone,
+    get_health_facts,
 )
 
 app = FastAPI()
 
-# ─────────────────────────────────────────
-# AUTH DEPENDENCY
-# ─────────────────────────────────────────
-#
-# Reads the "Authorization: Bearer <token>" header,
-# verifies it, and returns the user_id inside.
-# Any endpoint that lists Depends(get_current_user)
-# will be automatically protected.
-#
 bearer_scheme = HTTPBearer()
 
 def get_current_user(
@@ -44,12 +36,10 @@ def get_current_user(
 
 
 # ─────────────────────────────────────────
-# PUBLIC ENDPOINTS (no token needed)
+# PUBLIC ENDPOINTS
 # ─────────────────────────────────────────
 
 
-
-# Developers/Swagger: give me a token for this user_id directly
 @app.post("/generate-bearer-token")
 def generate_bearer_token(data: dict):
 
@@ -66,8 +56,6 @@ def generate_bearer_token(data: dict):
     }
 
 
-# Returning users: look up by phone, get token + history back
-# Hidden from Swagger docs since the original doesn't have this endpoint
 @app.get("/login/{phone_number}", include_in_schema=False)
 def login(phone_number: str):
 
@@ -89,7 +77,7 @@ def login(phone_number: str):
 
 
 # ─────────────────────────────────────────
-# PROTECTED ENDPOINTS (token required) 🔒
+# PROTECTED ENDPOINTS 🔒
 # ─────────────────────────────────────────
 
 @app.post("/upsert-user")
@@ -101,7 +89,8 @@ def register_user(
         user_id=data["user_id"],
         name=data["name"],
         email=data["email"],
-        phone_number=data["phone_number"]
+        phone_number=data["phone_number"],
+        city=data.get("city")
     )
 
     return {"message": "User saved"}
@@ -121,10 +110,7 @@ def send_message(
     return {"response": response}
 
 
-@app.post(
-    "/update-feedback",
-    summary="Handle Feedback"
-)
+@app.post("/update-feedback", summary="Handle Feedback")
 def update_feedback_endpoint(
     data: dict,
     current_user: str = Depends(get_current_user)
@@ -137,10 +123,7 @@ def update_feedback_endpoint(
     return {"message": "Feedback updated"}
 
 
-@app.get(
-    "/get-message/{message_id}",
-    summary="Get Message"
-)
+@app.get("/get-message/{message_id}", summary="Get Message")
 def single_message(
     message_id: int,
     current_user: str = Depends(get_current_user)
@@ -148,10 +131,7 @@ def single_message(
     return get_message_by_id(message_id)
 
 
-@app.get(
-    "/messages/{user_id}",
-    summary="Get Messages"
-)
+@app.get("/messages/{user_id}", summary="Get Messages")
 def user_messages(
     user_id: str,
     current_user: str = Depends(get_current_user)
@@ -159,20 +139,14 @@ def user_messages(
     return get_messages_by_user(user_id)
 
 
-@app.get(
-    "/messages",
-    summary="Get All Messages"
-)
+@app.get("/messages", summary="Get All Messages")
 def messages(
     current_user: str = Depends(get_current_user)
 ):
     return get_all_messages()
 
 
-@app.get(
-    "/users/{user_id}",
-    summary="Get Personas"
-)
+@app.get("/users/{user_id}", summary="Get Personas")
 def user(
     user_id: str,
     current_user: str = Depends(get_current_user)
@@ -180,24 +154,28 @@ def user(
     return get_user(user_id)
 
 
-@app.get(
-    "/users",
-    summary="Get All Personas"
-)
+@app.get("/users", summary="Get All Personas")
 def users(
     current_user: str = Depends(get_current_user)
 ):
     return get_all_users()
 
 
-@app.get(
-    "/analytics",
-    summary="Get Message Analytics"
-)
+@app.get("/analytics", summary="Get Message Analytics")
 def analytics(
     current_user: str = Depends(get_current_user)
 ):
     return get_analytics()
+
+
+# Returns health facts for a specific user — used by the dashboard
+@app.get("/users/{user_id}/facts", summary="Get User Health Facts", include_in_schema=False)
+def user_facts(
+    user_id: str,
+    current_user: str = Depends(get_current_user)
+):
+    facts = get_health_facts(user_id)
+    return [{"key": k, "value": v} for k, v in facts]
 
 @app.get("/")
 def root():

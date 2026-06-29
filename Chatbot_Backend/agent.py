@@ -1,5 +1,6 @@
 import json
 import re
+import time
 
 from google import genai
 
@@ -8,9 +9,6 @@ from Chatbot_Backend.config import API_KEY
 from Chatbot_Backend.db import (
     save_message,
     get_recent_messages,
-    upsert_user,
-    get_user_by_phone,
-    get_messages_by_user,
     get_health_facts,
     save_health_fact
 )
@@ -28,23 +26,14 @@ def create_token(user_id):
         "exp": datetime.utcnow() + timedelta(days=7)
     }
 
-    token = jwt.encode(
-        payload,
-        SECRET_KEY,
-        algorithm="HS256"
-    )
-
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
 
 
 def verify_token(token):
 
     try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=["HS256"]
-        )
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload
 
     except jwt.ExpiredSignatureError:
@@ -63,20 +52,8 @@ def load_system_prompt():
 
 
 def parse_health_facts(response_text):
-    """
-    The main LLM appends a [HEALTH_FACTS]...[/HEALTH_FACTS] block
-    at the end of every response. This function:
-    1. Extracts that block
-    2. Parses the key: value pairs inside it
-    3. Returns the clean response (without the block) + the facts dict
-
-    This way we make ZERO extra API calls — facts come for free
-    from the response we were already getting.
-    """
 
     facts = {}
-
-    # Find the block using regex
     pattern = r'\[HEALTH_FACTS\](.*?)\[/HEALTH_FACTS\]'
     match = re.search(pattern, response_text, re.DOTALL)
 
@@ -93,8 +70,9 @@ def parse_health_facts(response_text):
                     if key and value:
                         facts[key] = value
 
-        # Remove the entire block from the visible response
-        clean_response = re.sub(pattern, '', response_text, flags=re.DOTALL).strip()
+        clean_response = re.sub(
+            pattern, '', response_text, flags=re.DOTALL
+        ).strip()
     else:
         clean_response = response_text.strip()
 
@@ -102,11 +80,6 @@ def parse_health_facts(response_text):
 
 
 def build_health_facts_section(user_id):
-    """
-    Builds a section of the prompt that tells the LLM
-    what it already knows about this user's health.
-    This is how the LLM gives personalised advice.
-    """
 
     facts = get_health_facts(user_id)
 
@@ -121,29 +94,31 @@ def build_health_facts_section(user_id):
     return facts_text
 
 
+def count_tokens(text):
+    """
+    Rough token estimate — 1 token ≈ 4 characters.
+    Gemini's tokeniser isn't exposed in the basic SDK
+    so this is a close enough approximation for analytics.
+    """
+    return len(text) // 4
+
+
 def ask_llm(user_query, session_id, user_id):
 
-    # Save the user's message to DB
+    input_tokens = count_tokens(user_query)
+
     save_message(
         user_id=user_id,
         session_id=session_id,
         role="user",
-        content=user_query
+        content=user_query,
+        input_tokens=input_tokens
     )
 
-    # Load system prompt (which now includes fact extraction instructions)
     system_prompt = load_system_prompt()
-
-    # Inject known health facts about this user into the prompt
     health_facts_section = build_health_facts_section(user_id)
+    chat_history = get_recent_messages(session_id=session_id, limit=20)
 
-    # Get recent conversation history for context
-    chat_history = get_recent_messages(
-        session_id=session_id,
-        limit=20
-    )
-
-    # Build the full prompt
     prompt = f"""
 SYSTEM:
 
@@ -165,19 +140,22 @@ CONVERSATION:
 
     client = genai.Client(api_key=API_KEY)
 
+    # Start timer just before the Gemini call
+    start_time = time.time()
+
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )
 
-    raw_response = response.text
+    # Stop timer immediately after response
+    latency_ms = int((time.time() - start_time) * 1000)
 
-    # Parse out the health facts block from the response.
-    # This costs nothing — we're just reading what the LLM
-    # already returned, no extra API call needed.
+    raw_response = response.text
+    output_tokens = count_tokens(raw_response)
+
     clean_response, facts = parse_health_facts(raw_response)
 
-    # Save any extracted health facts to DB
     for fact_key, fact_value in facts.items():
         save_health_fact(
             user_id=user_id,
@@ -186,12 +164,15 @@ CONVERSATION:
         )
         print(f"HEALTH FACT SAVED: {fact_key} = {fact_value}")
 
-    # Save the clean response (without the facts block) to DB
+    print(f"LATENCY: {latency_ms}ms | INPUT TOKENS: {input_tokens} | OUTPUT TOKENS: {output_tokens}")
+
     save_message(
         user_id=user_id,
         session_id=session_id,
         role="assistant",
-        content=clean_response
+        content=clean_response,
+        output_tokens=output_tokens,
+        latency_ms=latency_ms
     )
 
     return clean_response

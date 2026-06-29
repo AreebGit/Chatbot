@@ -17,18 +17,31 @@ def get_connection():
 # MESSAGES
 # ─────────────────────────────────────────
 
-def save_message(user_id, session_id, role, content, feedback=None):
-
+def save_message(
+    user_id,
+    session_id,
+    role,
+    content,
+    feedback=None,
+    input_tokens=None,
+    output_tokens=None,
+    latency_ms=None
+):
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute(
         """
         INSERT INTO messages
-        (user_id, session_id, role, content, timestamp, feedback)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (user_id, session_id, role, content, timestamp, feedback,
+         input_tokens, output_tokens, latency_ms)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (user_id, session_id, role, content, datetime.now(), feedback)
+        (
+            user_id, session_id, role, content,
+            datetime.now(), feedback,
+            input_tokens, output_tokens, latency_ms
+        )
     )
 
     conn.commit()
@@ -131,22 +144,23 @@ def update_feedback(session_id, feedback):
 # USERS
 # ─────────────────────────────────────────
 
-def upsert_user(user_id, name, email, phone_number):
+def upsert_user(user_id, name, email, phone_number, city=None):
 
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute(
         """
-        INSERT INTO users (user_id, name, email, phone_number)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO users (user_id, name, email, phone_number, city)
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (user_id)
         DO UPDATE SET
             name = EXCLUDED.name,
             email = EXCLUDED.email,
-            phone_number = EXCLUDED.phone_number
+            phone_number = EXCLUDED.phone_number,
+            city = EXCLUDED.city
         """,
-        (user_id, name, email, phone_number)
+        (user_id, name, email, phone_number, city)
     )
 
     conn.commit()
@@ -199,19 +213,8 @@ def get_user_by_phone(phone_number):
 # ─────────────────────────────────────────
 # HEALTH FACTS
 # ─────────────────────────────────────────
-#
-# These replace the old generic user_facts.
-# The table can stay named user_facts in your DB —
-# we're just renaming the Python functions to be clearer.
-#
 
 def save_health_fact(user_id, fact_key, fact_value):
-    """
-    Saves or updates a health fact for a user.
-    ON CONFLICT means if the same fact_key already exists
-    for this user, it just updates the value instead of
-    creating a duplicate row.
-    """
 
     conn = get_connection()
     cur = conn.cursor()
@@ -232,10 +235,6 @@ def save_health_fact(user_id, fact_key, fact_value):
 
 
 def get_sessions(user_id):
-    """
-    Returns all distinct session IDs for a user.
-    Useful for loading past conversation sessions.
-    """
 
     conn = get_connection()
     cur = conn.cursor()
@@ -257,10 +256,6 @@ def get_sessions(user_id):
 
 
 def get_health_facts(user_id):
-    """
-    Returns all saved health facts for a user
-    as a list of (fact_key, fact_value) tuples.
-    """
 
     conn = get_connection()
     cur = conn.cursor()
@@ -285,7 +280,7 @@ def get_analytics():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT COUNT(*) FROM messages")
+    cur.execute("SELECT COUNT(*) FROM messages WHERE role = 'user'")
     total_messages = cur.fetchone()[0]
 
     cur.execute("SELECT COUNT(DISTINCT user_id) FROM messages")
@@ -294,11 +289,75 @@ def get_analytics():
     cur.execute("SELECT COUNT(DISTINCT session_id) FROM messages")
     total_sessions = cur.fetchone()[0]
 
+    cur.execute("""
+        SELECT COALESCE(AVG(input_tokens), 0)
+        FROM messages
+        WHERE role = 'user' AND input_tokens IS NOT NULL
+    """)
+    avg_input_tokens = round(float(cur.fetchone()[0]), 2)
+
+    cur.execute("""
+        SELECT COALESCE(AVG(output_tokens), 0)
+        FROM messages
+        WHERE role = 'assistant' AND output_tokens IS NOT NULL
+    """)
+    avg_output_tokens = round(float(cur.fetchone()[0]), 2)
+
+    avg_tokens_per_msg = round(avg_input_tokens + avg_output_tokens, 2)
+
+    cur.execute("""
+        SELECT COALESCE(AVG(latency_ms), 0)
+        FROM messages
+        WHERE role = 'assistant' AND latency_ms IS NOT NULL
+    """)
+    avg_latency_s = round(float(cur.fetchone()[0]) / 1000, 2)
+
+    sessions_per_user = round(
+        total_sessions / total_users, 2
+    ) if total_users > 0 else 0
+
+    messages_per_user = round(
+        total_messages / total_users, 2
+    ) if total_users > 0 else 0
+
+    cur.execute("""
+        SELECT feedback, COUNT(*)
+        FROM messages
+        WHERE feedback IS NOT NULL
+        GROUP BY feedback
+    """)
+    feedback_rows = cur.fetchall()
+    feedback = {row[0]: row[1] for row in feedback_rows}
+
+    cur.execute("""
+        SELECT timestamp, latency_ms
+        FROM messages
+        WHERE role = 'assistant' AND latency_ms IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 30
+    """)
+    latency_rows = cur.fetchall()
+    latency_chart = [
+        {
+            "time": str(row[0]),
+            "latency_s": round(row[1] / 1000, 2)
+        }
+        for row in reversed(latency_rows)
+    ]
+
     cur.close()
     conn.close()
 
     return {
         "total_messages": total_messages,
         "total_users": total_users,
-        "total_sessions": total_sessions
+        "total_sessions": total_sessions,
+        "avg_input_tokens": avg_input_tokens,
+        "avg_output_tokens": avg_output_tokens,
+        "avg_tokens_per_msg": avg_tokens_per_msg,
+        "avg_latency_s": avg_latency_s,
+        "sessions_per_user": sessions_per_user,
+        "messages_per_user": messages_per_user,
+        "feedback": feedback,
+        "latency_chart": latency_chart
     }
