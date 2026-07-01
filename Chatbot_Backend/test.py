@@ -1,9 +1,16 @@
+import logging
+
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from Chatbot_Backend.agent import ask_llm, create_token, verify_token
+from agent import stream_llm, create_token, verify_token
+from config import TOKEN_API_KEY
+from models import TokenRequest, UpsertUserRequest, UserMessage, FeedbackUpdate
+from Scheduler import setup_scheduler
 
-from Chatbot_Backend.db import (
+from db import (
     get_all_messages,
     get_messages_by_user,
     get_message_by_id,
@@ -12,27 +19,42 @@ from Chatbot_Backend.db import (
     get_all_users,
     get_user,
     update_feedback,
-    get_user_by_phone,
     get_health_facts,
 )
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+
+app = FastAPI(title="HappyTummy")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 bearer_scheme = HTTPBearer()
+
+
+@app.on_event("startup")
+async def startup_event():
+    setup_scheduler()
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
     token = credentials.credentials
-    payload = verify_token(token)
+    is_valid = verify_token(token)
 
-    if payload is None:
+    if not is_valid:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token. Please log in again."
         )
 
-    return payload["user_id"]
+    return True
 
 
 # ─────────────────────────────────────────
@@ -41,142 +63,292 @@ def get_current_user(
 
 
 @app.post("/generate-bearer-token")
-def generate_bearer_token(data: dict):
+def generate_bearer_token(data: TokenRequest):
+    try:
+        if not TOKEN_API_KEY:
+            raise HTTPException(status_code=500, detail="Server misconfiguration: TOKEN_API_KEY is not set")
 
-    user_id = data.get("user_id")
+        if data.api_key != TOKEN_API_KEY:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+        token = create_token()
 
-    token = create_token(user_id)
+        return {
+            "success": True,
+            "message": "Bearer token generated successfully.",
+            "data": {"bearer_token": token},
+            "error": None
+        }
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
-
-
-@app.get("/login/{phone_number}", include_in_schema=False)
-def login(phone_number: str):
-
-    user = get_user_by_phone(phone_number)
-
-    if not user:
-        return {"exists": False, "message": "User not found"}
-
-    user_id = user[1]
-    history = get_messages_by_user(user_id)
-    token = create_token(user_id)
-
-    return {
-        "exists": True,
-        "token": token,
-        "user": user,
-        "history": history
-    }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "generate_token_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
 # ─────────────────────────────────────────
 # PROTECTED ENDPOINTS 🔒
 # ─────────────────────────────────────────
 
+
 @app.post("/upsert-user")
 def register_user(
-    data: dict,
-    current_user: str = Depends(get_current_user)
+    data: UpsertUserRequest,
+    current_user: bool = Depends(get_current_user)
 ):
-    upsert_user(
-        user_id=data["user_id"],
-        name=data["name"],
-        email=data["email"],
-        phone_number=data["phone_number"],
-        city=data.get("city")
-    )
+    try:
+        upsert_user(
+            user_id=data.user_id,
+            name=data.name,
+            age=data.age,
+            gender=data.gender,
+            city=data.city
+        )
 
-    return {"message": "User saved"}
+        return {
+            "success": True,
+            "message": "User registered successfully.",
+            "data": None,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "upsert_user_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
 @app.post("/send-message")
 def send_message(
-    data: dict,
-    current_user: str = Depends(get_current_user)
+    data: UserMessage,
+    current_user: bool = Depends(get_current_user)
 ):
-    response = ask_llm(
-        user_query=data["incoming_message"],
-        session_id=data["session_id"],
-        user_id=data["user_id"]
-    )
+    """
+    Streams the LLM response token by token.
+    The last chunk is a JSON object with message_id, latency, and token counts.
+    """
+    try:
+        def response_stream():
+            for chunk in stream_llm(
+                user_query=data.incoming_message,
+                session_id=data.session_id,
+                user_id=data.user_id,
+                name=data.name,
+                age=data.age,
+                gender=data.gender,
+                city=data.city
+            ):
+                yield chunk
 
-    return {"response": response}
+        return StreamingResponse(
+            response_stream(),
+            media_type="text/event-stream"
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "send_message_error", "error": str(e), "user_id": data.user_id})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.post("/update-feedback", summary="Handle Feedback")
+@app.post("/update-feedback")
 def update_feedback_endpoint(
-    data: dict,
-    current_user: str = Depends(get_current_user)
+    data: FeedbackUpdate,
+    current_user: bool = Depends(get_current_user)
 ):
-    update_feedback(
-        session_id=data["session_id"],
-        feedback=data["feedback"]
-    )
+    try:
+        updated = update_feedback(
+            message_id=data.message_id,
+            user_feedback=data.user_feedback
+        )
 
-    return {"message": "Feedback updated"}
+        if not updated:
+            raise HTTPException(status_code=404, detail="Message not found.")
+
+        logging.info({"event": "feedback_updated", "message_id": data.message_id})
+
+        return {
+            "success": True,
+            "message": "Feedback updated successfully.",
+            "data": None,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "update_feedback_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/get-message/{message_id}", summary="Get Message")
+@app.get("/get-message/{message_id}")
 def single_message(
-    message_id: int,
-    current_user: str = Depends(get_current_user)
+    message_id: str,
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_message_by_id(message_id)
+    try:
+        message = get_message_by_id(message_id)
+
+        if not message:
+            raise HTTPException(status_code=404, detail="Message not found.")
+
+        return {
+            "success": True,
+            "message": "Message retrieved successfully.",
+            "data": message,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_message_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/messages/{user_id}", summary="Get Messages")
+@app.get("/messages/{user_id}")
 def user_messages(
     user_id: str,
-    current_user: str = Depends(get_current_user)
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_messages_by_user(user_id)
+    try:
+        messages = get_messages_by_user(user_id)
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="No messages found for the user.")
+
+        return {
+            "success": True,
+            "message": "Messages retrieved successfully.",
+            "data": messages,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_messages_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/messages", summary="Get All Messages")
-def messages(
-    current_user: str = Depends(get_current_user)
+@app.get("/messages")
+def all_messages(
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_all_messages()
+    try:
+        messages = get_all_messages()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="No messages found.")
+
+        return {
+            "success": True,
+            "message": "All messages retrieved successfully.",
+            "data": messages,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_all_messages_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/users/{user_id}", summary="Get Personas")
-def user(
+@app.get("/users/{user_id}")
+def single_user(
     user_id: str,
-    current_user: str = Depends(get_current_user)
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_user(user_id)
+    try:
+        user = get_user(user_id)
+
+        if not user:
+            raise HTTPException(status_code=404, detail=f"No user found for {user_id}.")
+
+        return {
+            "success": True,
+            "message": "User retrieved successfully.",
+            "data": user,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_user_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/users", summary="Get All Personas")
-def users(
-    current_user: str = Depends(get_current_user)
+@app.get("/users")
+def all_users(
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_all_users()
+    try:
+        users = get_all_users()
+
+        if not users:
+            raise HTTPException(status_code=404, detail="No users found.")
+
+        return {
+            "success": True,
+            "message": "All users retrieved successfully.",
+            "data": users,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_all_users_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@app.get("/analytics", summary="Get Message Analytics")
+@app.get("/analytics")
 def analytics(
-    current_user: str = Depends(get_current_user)
+    current_user: bool = Depends(get_current_user)
 ):
-    return get_analytics()
+    try:
+        data = get_analytics()
+
+        return {
+            "success": True,
+            "message": "Analytics retrieved successfully.",
+            "data": data,
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_analytics_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-# Returns health facts for a specific user — used by the dashboard
-@app.get("/users/{user_id}/facts", summary="Get User Health Facts", include_in_schema=False)
+@app.get("/users/{user_id}/facts", include_in_schema=False)
 def user_facts(
     user_id: str,
-    current_user: str = Depends(get_current_user)
+    current_user: bool = Depends(get_current_user)
 ):
-    facts = get_health_facts(user_id)
-    return [{"key": k, "value": v} for k, v in facts]
+    try:
+        facts = get_health_facts(user_id)
+        return {
+            "success": True,
+            "message": "Health facts retrieved successfully.",
+            "data": [{"key": k, "value": v} for k, v in facts],
+            "error": None
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error({"event": "get_user_facts_error", "error": str(e)})
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
 
 @app.get("/")
 def root():
-    return {"message": "Happy Tummy API"}
+    return {"message": "Hello from root!"}

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HappyTummy Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sidebar-bg: #0f1117;
+    --sidebar-width: 240px;
+    --accent: #4f6ef7;
+    --accent-light: #e8ecff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --border: #e5e9f2;
+    --text: #0f1117;
+    --text-muted: #6b7280;
+    --text-hint: #9ca3af;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    padding: 0;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 20px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #f5820a, #f5c842);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .sidebar-logo span {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .sidebar-section {
+    padding: 20px 12px 8px;
+  }
+
+  .sidebar-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+    text-decoration: none;
+    margin-bottom: 2px;
+  }
+
+  .sidebar-item:hover {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.85);
+  }
+
+  .sidebar-item.active {
+    background: rgba(79,110,247,0.18);
+    color: #fff;
+  }
+
+  .sidebar-item svg {
+    width: 16px; height: 16px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-item.external svg.ext {
+    width: 12px; height: 12px;
+    margin-left: auto;
+    opacity: 0.4;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 28px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .topbar-label input[type=checkbox] { accent-color: var(--accent); }
+
+  .topbar select {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* ── PAGES ── */
+  .page { display: none; padding: 28px; }
+  .page.active { display: block; }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .breadcrumb {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+
+  .breadcrumb span { color: var(--accent); }
+
+  /* ── STAT CARDS ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .stat-card-icon {
+    width: 36px; height: 36px;
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+
+  .stat-card-icon svg {
+    width: 18px; height: 18px;
+    color: var(--accent);
+  }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .stat-trend {
+    position: absolute;
+    top: 20px; right: 18px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .stat-trend svg { width: 14px; height: 14px; }
+
+  /* ── CHARTS ROW ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 22px;
+  }
+
+  .chart-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: var(--text);
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+  }
+
+  .donut-wrap {
+    position: relative;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .donut-legend {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-item strong {
+    margin-left: auto;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── USERS TABLE ── */
+  .users-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .table-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table-toolbar h3 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .table-toolbar-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .search-input {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    width: 180px;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-hint); }
+
+  .btn-download {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-download:hover { opacity: 0.88; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: #fafbfd;
+    white-space: nowrap;
+  }
+
+  thead th.accent { color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f9fafc; }
+
+  tbody td {
+    padding: 13px 16px;
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .td-name { color: var(--text-muted); font-size: 13px; }
+  .td-gender-m { color: var(--accent); font-weight: 500; }
+  .td-gender-f { color: #e879a0; font-weight: 500; }
+  .td-city { color: #f5820a; font-weight: 500; }
+
+  .facts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .fact-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .fact-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .no-facts {
+    font-size: 12px;
+    color: var(--text-hint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* loading / empty */
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-bottom: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* scrollable table */
+  .table-scroll { max-height: 440px; overflow-y: auto; }
+  .table-scroll::-webkit-scrollbar { width: 4px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌾</div>
+    <span>HappyTummy</span>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Reports</div>
+    <div class="sidebar-item active" onclick="showPage('messages')" id="nav-messages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Messages
+    </div>
+    <div class="sidebar-item" onclick="showPage('users')" id="nav-users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      Users
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Configure</div>
+    <a class="sidebar-item external" href="/" target="_blank" id="nav-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Chat Interface
+      <svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </a>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <label class="topbar-label">
+      <input type="checkbox" id="show-total" onchange="renderMessages()"/>
+      Show Total
+    </label>
+    <select id="date-range" onchange="renderMessages()">
+      <option value="7">Last 7 Days</option>
+      <option value="30">Last 30 Days</option>
+      <option value="90">Last 90 Days</option>
+      <option value="0">All Time</option>
+    </select>
+  </div>
+
+  <!-- ── MESSAGES PAGE ── -->
+  <div class="page active" id="page-messages">
+
+    <div class="cards-grid" id="stat-cards">
+      <div class="loading"><div class="spinner"></div><br/>Loading analytics…</div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>Latency Distribution</h3>
+        <div class="chart-wrap">
+          <canvas id="latency-chart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Feedback Analytics</h3>
+        <div class="donut-wrap">
+          <canvas id="feedback-chart"></canvas>
+        </div>
+        <div class="donut-legend" id="feedback-legend"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── USERS PAGE ── -->
+  <div class="page" id="page-users">
+    <div class="page-title">Persona</div>
+    <div class="breadcrumb">Dashboard / <span>Persona</span></div>
+
+    <div class="users-cards" id="users-stat-cards">
+      <div class="loading"><div class="spinner"></div><br/>Loading…</div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h3 id="users-table-title">User Profiles</h3>
+        <div class="table-toolbar-right">
+          <input class="search-input" type="text" placeholder="Search users…" oninput="filterUsers(this.value)" />
+          <button class="btn-download" onclick="downloadCSV()">Download</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th class="accent">City</th>
+              <th>Health Facts</th>
+              <th class="accent">Input Tokens</th>
+              <th class="accent">Output Tokens</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="8" class="loading"><div class="spinner"></div><br/>Loading users…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────
+// CONFIG — replace with your token and API URL
+// ─────────────────────────────────────────
+const API_BASE = 'http://localhost:8000';
+const TOKEN = 'ht_sk_0d3863b121dc5f645f374b5c6b4ab62d';
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${TOKEN}`
+  };
+}
+
+// ─────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.getElementById(`nav-${page}`).classList.add('active');
+
+  if (page === 'messages') renderMessages();
+  if (page === 'users') renderUsers();
+}
+
+// ─────────────────────────────────────────
+// MESSAGES PAGE
+// ─────────────────────────────────────────
+let latencyChartInstance = null;
+let feedbackChartInstance = null;
+
+async function renderMessages() {
+  try {
+    const res = await fetch(`${API_BASE}/analytics`, { headers: authHeaders() });
+    const d = await res.json();
+    const showTotal = document.getElementById('show-total').checked;
+
+    // Stat cards
+    const cards = [
+      { icon: msgIcon(), label: 'Avg Input Tokens', value: d.avg_input_tokens },
+      { icon: msgIcon(), label: 'Avg Output Tokens', value: d.avg_output_tokens },
+      { icon: msgIcon(), label: 'Avg Tokens / Msg', value: d.avg_tokens_per_msg },
+      { icon: dbIcon(), label: 'Sessions / User', value: d.sessions_per_user },
+      { icon: screenIcon(), label: 'Messages / User', value: d.messages_per_user },
+      { icon: msgIcon(), label: 'Avg Latency (s)', value: d.avg_latency_s },
+    ];
+
+    if (showTotal) {
+      cards.unshift(
+        { icon: usersIcon(), label: 'Total Users', value: d.total_users },
+        { icon: msgIcon(), label: 'Total Messages', value: d.total_messages },
+        { icon: dbIcon(), label: 'Total Sessions', value: d.total_sessions },
+      );
+    }
+
+    document.getElementById('stat-cards').innerHTML = cards.map(c => `
+      <div class="stat-card">
+        <div class="stat-card-icon">${c.icon}</div>
+        <div class="stat-value">${c.value}</div>
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-trend">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </div>
+      </div>
+    `).join('');
+
+    // Latency chart
+    const labels = d.latency_chart.map((r, i) => {
+      const t = new Date(r.time);
+      return t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    });
+    const values = d.latency_chart.map(r => r.latency_s);
+
+    if (latencyChartInstance) latencyChartInstance.destroy();
+    latencyChartInstance = new Chart(
+      document.getElementById('latency-chart'),
+      {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            borderColor: '#4f6ef7',
+            backgroundColor: 'rgba(79,110,247,0.12)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#4f6ef7',
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { color: '#f0f0f0', drawBorder: false },
+              ticks: { font: { size: 11 }, color: '#9ca3af', maxTicksLimit: 8 }
+            },
+            y: {
+              grid: { color: '#f0f0f0', drawBorder: false },
+              ticks: { font: { size: 11 }, color: '#9ca3af' },
+              title: { display: true, text: 'Avg Latency (s)', font: { size: 11 }, color: '#9ca3af' }
+            }
+          }
+        }
+      }
+    );
+
+    // Feedback donut
+    const helpful = d.feedback['helpful'] || 0;
+    const not_helpful = d.feedback['not_helpful'] || 0;
+    const total_fb = helpful + not_helpful;
+
+    if (feedbackChartInstance) feedbackChartInstance.destroy();
+    feedbackChartInstance = new Chart(
+      document.getElementById('feedback-chart'),
+      {
+        type: 'doughnut',
+        data: {
+          labels: ['Helpful', 'Not Helpful'],
+          datasets: [{
+            data: [helpful, not_helpful || (total_fb === 0 ? 1 : 0)],
+            backgroundColor: ['#93c5fd', '#3b4fd8'],
+            borderWidth: 0,
+            hoverOffset: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: { legend: { display: false } }
+        }
+      }
+    );
+
+    document.getElementById('feedback-legend').innerHTML = `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#93c5fd"></div>
+        Helpful
+        <strong>${helpful}</strong>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#3b4fd8"></div>
+        Not Helpful
+        <strong>${not_helpful}</strong>
+      </div>
+    `;
+
+  } catch(e) {
+    console.error('Analytics error:', e);
+    document.getElementById('stat-cards').innerHTML =
+      '<div class="loading" style="color:#ef4444">Failed to load analytics. Check your token and API_BASE.</div>';
+  }
+}
+
+// ─────────────────────────────────────────
+// USERS PAGE
+// ─────────────────────────────────────────
+let allUsers = [];
+
+async function renderUsers() {
+  try {
+    // Fetch users and analytics in parallel
+    const [usersRes, analyticsRes] = await Promise.all([
+      fetch(`${API_BASE}/users`, { headers: authHeaders() }),
+      fetch(`${API_BASE}/analytics`, { headers: authHeaders() })
+    ]);
+
+    const users = await usersRes.json();
+    const analytics = await analyticsRes.json();
+
+    document.getElementById('users-stat-cards').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-card-icon">${usersIcon()}</div>
+        <div class="stat-value">${analytics.total_users}</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-trend">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">${msgIcon()}</div>
+        <div class="stat-value">${analytics.messages_per_user}</div>
+        <div class="stat-label">Messages / User</div>
+        <div class="stat-trend">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </div>
+      </div>
+    `;
+
+    // users rows: (id, user_id, name, email, phone_number, city)
+    // Fetch health facts for each user
+    const userRows = await Promise.all(users.map(async (u) => {
+      const user_id = u[1];
+      const name = u[2];
+      const city = u[5] || '—';
+
+      let facts = [];
+      try {
+        const fr = await fetch(`${API_BASE}/users/${user_id}/facts`, { headers: authHeaders() });
+        facts = await fr.json();
+      } catch(e) {}
+
+      // Extract age and gender from facts
+      const ageFact = facts.find(f => f.key === 'age');
+      const genderFact = facts.find(f => f.key === 'gender');
+      const otherFacts = facts.filter(f => f.key !== 'age' && f.key !== 'gender');
+
+      return { user_id, name, city, age: ageFact?.value || '—', gender: genderFact?.value || '—', facts: otherFacts };
+    }));
+
+    // Also get token totals per user from messages
+    const messagesRes = await fetch(`${API_BASE}/messages`, { headers: authHeaders() });
+    const messages = await messagesRes.json();
+
+    // Calculate per-user token totals from messages
+    // message row: (id, user_id, session_id, role, content, timestamp, feedback, input_tokens, output_tokens, latency_ms)
+    const tokenMap = {};
+    messages.forEach(m => {
+      const uid = m[1];
+      if (!tokenMap[uid]) tokenMap[uid] = { input: 0, output: 0 };
+      if (m[7]) tokenMap[uid].input += m[7];
+      if (m[8]) tokenMap[uid].output += m[8];
+    });
+
+    allUsers = userRows.map(u => ({
+      ...u,
+      input_tokens: tokenMap[u.user_id]?.input || 0,
+      output_tokens: tokenMap[u.user_id]?.output || 0
+    }));
+
+    document.getElementById('users-table-title').textContent = `User Profiles (${allUsers.length})`;
+    renderUsersTable(allUsers);
+
+  } catch(e) {
+    console.error('Users error:', e);
+    document.getElementById('users-tbody').innerHTML =
+      '<tr><td colspan="8" class="loading" style="color:#ef4444">Failed to load users. Check your token and API_BASE.</td></tr>';
+  }
+}
+
+function renderUsersTable(rows) {
+  if (!rows.length) {
+    document.getElementById('users-tbody').innerHTML =
+      '<tr><td colspan="8" class="loading">No users found.</td></tr>';
+    return;
+  }
+
+  document.getElementById('users-tbody').innerHTML = rows.map(u => `
+    <tr>
+      <td>${u.user_id}</td>
+      <td class="td-name">${u.name || '—'}</td>
+      <td>${u.age}</td>
+      <td class="${u.gender?.toLowerCase() === 'female' ? 'td-gender-f' : 'td-gender-m'}">${u.gender}</td>
+      <td class="td-city">${u.city}</td>
+      <td>
+        ${u.facts.length > 0
+          ? `<div class="facts-list">${u.facts.map(f =>
+              `<div class="fact-tag"><div class="fact-dot"></div>${f.key}: ${f.value}</div>`
+            ).join('')}</div>`
+          : `<div class="no-facts"><div class="fact-dot" style="background:var(--text-hint)"></div>No health facts available.</div>`
+        }
+      </td>
+      <td>${u.input_tokens}</td>
+      <td>${u.output_tokens}</td>
+    </tr>
+  `).join('');
+}
+
+function filterUsers(query) {
+  const q = query.toLowerCase();
+  const filtered = allUsers.filter(u =>
+    u.name?.toLowerCase().includes(q) ||
+    u.user_id?.toLowerCase().includes(q) ||
+    u.city?.toLowerCase().includes(q)
+  );
+  renderUsersTable(filtered);
+}
+
+function downloadCSV() {
+  const headers = ['User ID', 'Name', 'Age', 'Gender', 'City', 'Health Facts', 'Input Tokens', 'Output Tokens'];
+  const rows = allUsers.map(u => [
+    u.user_id,
+    u.name,
+    u.age,
+    u.gender,
+    u.city,
+    u.facts.map(f => `${f.key}: ${f.value}`).join(' | '),
+    u.input_tokens,
+    u.output_tokens
+  ]);
+
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'users.csv';
+  a.click();
+}
+
+// ─────────────────────────────────────────
+// ICONS
+// ─────────────────────────────────────────
+function msgIcon() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>`;
+}
+function dbIcon() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+  </svg>`;
+}
+function screenIcon() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+    <line x1="12" y1="17" x2="12" y2="21"/>
+  </svg>`;
+}
+function usersIcon() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>`;
+}
+
+// ── Init ──
+renderMessages();
+</script>
+</body>
+</html>

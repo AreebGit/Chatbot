@@ -228,9 +228,32 @@ async function sendMessage() {
 
     if (res.status === 401) { typingEl.remove(); handleAuthError(); return; }
 
-    const data = await res.json();
+    // Switch from .json() to a stream reader so text appears word by word
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
     typingEl.remove();
-    const msgEl = addAssistantMessage(data.response);
+
+    // Create the assistant bubble once, then append chunks into it
+    const msgEl = addAssistantMessage('');
+    const textNode = msgEl.querySelector('.msg-assistant-text');
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+
+      // Final chunk is JSON metadata -- skip rendering it
+      try {
+        const parsed = JSON.parse(chunk.trim());
+        if (parsed.message_id !== undefined) continue;
+      } catch (_) {}
+
+      textNode.textContent += chunk;
+      msgEl.scrollIntoView({ block: 'end' });
+    }
+
     addFeedbackRow(msgEl);
     showNewChatBtn();
   } catch(e) {
